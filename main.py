@@ -280,14 +280,27 @@ def pagina_cadastrar_produtos():
         # Chama a função
         pagina_entrada_produtos()
 
-
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
+
+    # CSS para forçar duas colunas fixas, mesmo em mobile
+    st.markdown(
+        """
+        <style>
+        /* Força que os elementos do grid tenham 50% de largura (duas colunas) */
+        div[data-baseweb="grid"] > div {
+            flex: 0 0 50% !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
-    num_colunas = 3
+    # Defina duas colunas fixas
+    num_colunas = 2
     colunas = st.columns(num_colunas)
 
     def calcular_saldo(produto_nome, movimentos):
@@ -305,13 +318,14 @@ def pagina_emitir_venda():
     produtos_ativos = [p for p in produtos_db if p[3] == "Ativo"]
     movimentos = listar_movimentacoes_bd()
 
+    # Exibir produtos em duas colunas fixas
     for i, p in enumerate(produtos_ativos):
         coluna = colunas[i % num_colunas]
         with coluna:
             pid, nome, info, status, preco, imagem_url = p
             saldo = calcular_saldo(nome, movimentos)
 
-            # Contêiner fixo de 150×150 para a imagem
+            # Contêiner fixo para imagem: 150x150 com object-fit: cover
             if imagem_url:
                 image_html = f"""
                 <div style="width:150px; height:150px; overflow:hidden; border-radius:8px; border:1px solid #ccc;">
@@ -329,10 +343,10 @@ def pagina_emitir_venda():
 
             st.markdown(f"**{nome}** ({saldo} disponíveis)")
 
+            # Duas colunas para exibir preço e quantidade
             price_qtd_cols = st.columns([1, 1])
             with price_qtd_cols[0]:
                 st.markdown(f"**R$ {preco:.2f}**")
-
             with price_qtd_cols[1]:
                 if saldo > 0:
                     qtd_selecionada = st.number_input(
@@ -343,7 +357,7 @@ def pagina_emitir_venda():
                         step=1,
                         key=f"qtd_{i}"
                     )
-                    qtd_selecionada = int(qtd_selecionada)  # Converte para int
+                    qtd_selecionada = int(qtd_selecionada)
                 else:
                     st.warning("Estoque esgotado!")
                     qtd_selecionada = st.number_input(
@@ -357,24 +371,21 @@ def pagina_emitir_venda():
                     )
                     qtd_selecionada = int(qtd_selecionada)
 
-
-            # Botão de adicionar ao carrinho
             msg_container = st.empty()
             if st.button(f"🛍️ Adicionar {nome}", key=f"add_{i}"):
                 if qtd_selecionada > saldo:
                     msg_container.error("Quantidade indisponível no estoque!")
                 else:
                     if nome in st.session_state.carrinho:
-                        st.session_state.carrinho[nome]["quantidade"] += int(qtd_selecionada)
+                        st.session_state.carrinho[nome]["quantidade"] += qtd_selecionada
                     else:
-                        st.session_state.carrinho[nome] = {"preco": preco, "quantidade": int(qtd_selecionada)}
-                    msg_container.success(f"{int(qtd_selecionada)}x {nome} adicionado ao carrinho!")
-
+                        st.session_state.carrinho[nome] = {"preco": preco, "quantidade": qtd_selecionada}
+                    msg_container.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
             st.markdown("---")
 
-    # ======================
-    # CARRINHO DE COMPRAS
-    # ======================
+    # ==========================
+    # Exibição do Carrinho
+    # ==========================
     st.markdown("## 🛒 Carrinho")
     if st.session_state.carrinho:
         total = 0
@@ -408,13 +419,11 @@ def pagina_emitir_venda():
         </div>
         """, unsafe_allow_html=True)
 
-        # Escolha do método de pagamento
         st.markdown("### 🏦 Escolha o método de pagamento:")
         metodo_pagamento = st.radio("Selecione uma opção:", ["Dinheiro", "Pix", "Cartão", "Outro"])
         if metodo_pagamento == "Outro":
             metodo_personalizado = st.text_input("Digite o método de pagamento:")
 
-        # Finalizar venda
         op_num = None
         if st.button("Finalizar Venda"):
             usuario = st.session_state.get("usuario_logado", "Desconhecido")
@@ -450,7 +459,6 @@ def pagina_emitir_venda():
             st.session_state.carrinho = {}
             st.rerun()
 
-        # Botão para limpar o carrinho
         if st.button("🧹 Limpar Carrinho"):
             st.session_state.carrinho = {}
             st.success("Carrinho limpo!")
@@ -461,6 +469,8 @@ def pagina_emitir_venda():
             "🛒 Seu carrinho está vazio.</div>",
             unsafe_allow_html=True,
         )
+
+
 
 
 
