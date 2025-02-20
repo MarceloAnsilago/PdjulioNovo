@@ -282,7 +282,9 @@ def pagina_cadastrar_produtos():
 
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
-
+    st.set_page_config(page_title="PDV", layout="wide")
+    colunas = st.columns(num_colunas, gap="large")
+    
     # Injetar CSS customizado para forçar duas colunas fixas
     st.markdown(
         """
@@ -352,7 +354,8 @@ def pagina_emitir_venda():
                         max_value=saldo,
                         value=1,
                         step=1,
-                        key=f"qtd_{i}"
+                        key=f"qtd_{i}",
+                        label_visibility="collapsed"
                     )
                     qtd_selecionada = int(qtd_selecionada)
                 else:
