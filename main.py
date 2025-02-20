@@ -282,8 +282,8 @@ def pagina_cadastrar_produtos():
 
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
-    st.set_page_config(page_title="PDV", layout="wide")
-    colunas = st.columns(num_colunas, gap="large")
+    # st.set_page_config(page_title="PDV", layout="wide")
+    # colunas = st.columns(num_colunas, gap="large")
     
     # Injetar CSS customizado para forçar duas colunas fixas
     st.markdown(
@@ -649,7 +649,7 @@ def pagina_financeiro():
         entradas_por_produto[produto] += total_entrada
 
     # Define quantas colunas por linha (exemplo: 3)
-    num_colunas = 3
+    num_colunas = 2
     cols = st.columns(num_colunas)
 
     i = 0
