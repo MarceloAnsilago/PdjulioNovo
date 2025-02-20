@@ -649,7 +649,7 @@ def pagina_financeiro():
         entradas_por_produto[produto] += total_entrada
 
     # Define quantas colunas por linha (exemplo: 3)
-    num_colunas = 2
+    num_colunas = 3
     cols = st.columns(num_colunas)
 
     i = 0
