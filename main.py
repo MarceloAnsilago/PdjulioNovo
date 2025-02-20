@@ -283,13 +283,14 @@ def pagina_cadastrar_produtos():
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
 
-    # CSS para forçar duas colunas fixas, mesmo em mobile
+    # Injetar CSS customizado para forçar duas colunas fixas
     st.markdown(
         """
         <style>
-        /* Força que os elementos do grid tenham 50% de largura (duas colunas) */
+        /* Força que cada item do grid ocupe 50% da largura, mantendo duas colunas fixas */
         div[data-baseweb="grid"] > div {
             flex: 0 0 50% !important;
+            max-width: 50% !important;
         }
         </style>
         """,
@@ -299,7 +300,6 @@ def pagina_emitir_venda():
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
-    # Defina duas colunas fixas
     num_colunas = 2
     colunas = st.columns(num_colunas)
 
@@ -318,14 +318,12 @@ def pagina_emitir_venda():
     produtos_ativos = [p for p in produtos_db if p[3] == "Ativo"]
     movimentos = listar_movimentacoes_bd()
 
-    # Exibir produtos em duas colunas fixas
     for i, p in enumerate(produtos_ativos):
         coluna = colunas[i % num_colunas]
         with coluna:
             pid, nome, info, status, preco, imagem_url = p
             saldo = calcular_saldo(nome, movimentos)
 
-            # Contêiner fixo para imagem: 150x150 com object-fit: cover
             if imagem_url:
                 image_html = f"""
                 <div style="width:150px; height:150px; overflow:hidden; border-radius:8px; border:1px solid #ccc;">
@@ -343,7 +341,6 @@ def pagina_emitir_venda():
 
             st.markdown(f"**{nome}** ({saldo} disponíveis)")
 
-            # Duas colunas para exibir preço e quantidade
             price_qtd_cols = st.columns([1, 1])
             with price_qtd_cols[0]:
                 st.markdown(f"**R$ {preco:.2f}**")
@@ -383,6 +380,7 @@ def pagina_emitir_venda():
                     msg_container.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
             st.markdown("---")
 
+   
     # ==========================
     # Exibição do Carrinho
     # ==========================
