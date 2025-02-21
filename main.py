@@ -284,6 +284,7 @@ import streamlit as st
 
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
+    
 
     # CSS para forçar duas colunas fixas (mesmo em mobile)
     st.markdown(
@@ -809,7 +810,8 @@ def pagina_gerenciar_usuarios():
 ################################################
 
 def main():
-    st.title("Gerenciador de Vendas 🛒")
+    # st.title("Gerenciador de Vendas 🛒", layout="wide")
+    st.set_page_config(page_title="Gerenciador de Vendas 🛒", layout="wide")
 
     if "banco_inicializado" not in st.session_state:
         criar_banco_de_dados()
