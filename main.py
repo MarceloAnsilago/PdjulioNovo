@@ -281,29 +281,25 @@ def pagina_cadastrar_produtos():
         pagina_entrada_produtos()
 
 def pagina_emitir_venda():
-    st.title("🛒 PDV - Emitir Venda")
-    # st.set_page_config(page_title="PDV", layout="wide")
-    # colunas = st.columns(num_colunas, gap="large")
-    
-    # Injetar CSS customizado para forçar duas colunas fixas
-    st.markdown(
-        """
+   # CSS customizado responsivo
+    st.markdown("""
         <style>
-        /* Força que cada item do grid ocupe 50% da largura, mantendo duas colunas fixas */
-        div[data-baseweb="grid"] > div {
-            flex: 0 0 50% !important;
-            max-width: 50% !important;
-        }
+            @media (max-width: 480px) {
+                [data-testid="column"] {
+                    flex: 1 1 calc(50% - 1rem) !important;
+                    min-width: calc(50% - 1rem) !important;
+                }
+            }
         </style>
-        """,
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
 
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
     num_colunas = 2
-    colunas = st.columns(num_colunas)
+    colunas = st.columns(num_colunas, gap="medium")
+
+    
 
     def calcular_saldo(produto_nome, movimentos):
         entradas = sum(
