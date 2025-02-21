@@ -281,25 +281,27 @@ def pagina_cadastrar_produtos():
         pagina_entrada_produtos()
 
 def pagina_emitir_venda():
-   # CSS customizado responsivo
-    st.markdown("""
+    st.title("🛒 PDV - Emitir Venda")
+
+    # CSS para forçar duas colunas fixas (mesmo em mobile)
+    st.markdown(
+        """
         <style>
-            @media (max-width: 480px) {
-                [data-testid="column"] {
-                    flex: 1 1 calc(50% - 1rem) !important;
-                    min-width: calc(50% - 1rem) !important;
-                }
-            }
+        /* Força que cada item do grid tenha 50% da largura */
+        div[data-baseweb="grid"] > div {
+            flex: 0 0 50% !important;
+            max-width: 50% !important;
+        }
         </style>
-    """, unsafe_allow_html=True)
+        """,
+        unsafe_allow_html=True
+    )
 
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
     num_colunas = 2
-    colunas = st.columns(num_colunas, gap="medium")
-
-    
+    colunas = st.columns(num_colunas)
 
     def calcular_saldo(produto_nome, movimentos):
         entradas = sum(
@@ -322,6 +324,7 @@ def pagina_emitir_venda():
             pid, nome, info, status, preco, imagem_url = p
             saldo = calcular_saldo(nome, movimentos)
 
+            # Exibir imagem
             if imagem_url:
                 image_html = f"""
                 <div style="width:150px; height:150px; overflow:hidden; border-radius:8px; border:1px solid #ccc;">
@@ -337,36 +340,35 @@ def pagina_emitir_venda():
                 </div>
                 """, unsafe_allow_html=True)
 
+            # Nome e estoque disponível
             st.markdown(f"**{nome}** ({saldo} disponíveis)")
 
-            price_qtd_cols = st.columns([1, 1])
-            with price_qtd_cols[0]:
-                st.markdown(f"**R$ {preco:.2f}**")
-            with price_qtd_cols[1]:
-                if saldo > 0:
-                    qtd_selecionada = st.number_input(
-                        label="Qtd",
-                        min_value=1,
-                        max_value=saldo,
-                        value=1,
-                        step=1,
-                        key=f"qtd_{i}",
-                        label_visibility="collapsed"
-                    )
-                    qtd_selecionada = int(qtd_selecionada)
-                else:
-                    st.warning("Estoque esgotado!")
-                    qtd_selecionada = st.number_input(
-                        label="Qtd",
-                        min_value=0,
-                        max_value=0,
-                        value=0,
-                        step=1,
-                        key=f"qtd_{i}",
-                        disabled=True
-                    )
-                    qtd_selecionada = int(qtd_selecionada)
+            # Preço e quantidade (empilhados)
+            st.markdown(f"**R$ {preco:.2f}**")
+            if saldo > 0:
+                qtd_selecionada = st.number_input(
+                    label="Qtd",
+                    min_value=1,
+                    max_value=saldo,
+                    value=1,
+                    step=1,
+                    key=f"qtd_{i}"
+                )
+                qtd_selecionada = int(qtd_selecionada)
+            else:
+                st.warning("Estoque esgotado!")
+                qtd_selecionada = st.number_input(
+                    label="Qtd",
+                    min_value=0,
+                    max_value=0,
+                    value=0,
+                    step=1,
+                    key=f"qtd_{i}",
+                    disabled=True
+                )
+                qtd_selecionada = int(qtd_selecionada)
 
+            # Botão de adicionar ao carrinho
             msg_container = st.empty()
             if st.button(f"🛍️ Adicionar {nome}", key=f"add_{i}"):
                 if qtd_selecionada > saldo:
@@ -379,10 +381,9 @@ def pagina_emitir_venda():
                     msg_container.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
             st.markdown("---")
 
-   
-    # ==========================
-    # Exibição do Carrinho
-    # ==========================
+    # ======================
+    # CARRINHO DE COMPRAS
+    # ======================
     st.markdown("## 🛒 Carrinho")
     if st.session_state.carrinho:
         total = 0
