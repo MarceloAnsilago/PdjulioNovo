@@ -280,28 +280,20 @@ def pagina_cadastrar_produtos():
         # Chama a função
         pagina_entrada_produtos()
 
+import streamlit as st
+
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
 
-    # CSS para forçar duas colunas fixas (mesmo em mobile)
-    st.markdown(
-        """
-        <style>
-        /* Força que cada item do grid tenha 50% da largura */
-        div[data-baseweb="grid"] > div {
-            flex: 0 0 50% !important;
-            max-width: 50% !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
+    # Se quiser layout wide:
+    # st.set_page_config(page_title="PDV", layout="wide")
 
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
-    num_colunas = 2
-    colunas = st.columns(num_colunas)
+    produtos_db = listar_produtos_bd()
+    produtos_ativos = [p for p in produtos_db if p[3] == "Ativo"]
+    movimentos = listar_movimentacoes_bd()
 
     def calcular_saldo(produto_nome, movimentos):
         entradas = sum(
@@ -310,76 +302,132 @@ def pagina_emitir_venda():
         )
         saidas = sum(
             m[6] for m in movimentos
-            if m[3] == produto_nome and m[7].lower() in ("venda", "saída", "saida") and m[10].lower() == "ativo"
+            if m[3] == produto_nome and m[7].lower() in ("venda", "saida", "saída") and m[10].lower() == "ativo"
         )
         return entradas - saidas
 
-    produtos_db = listar_produtos_bd()
-    produtos_ativos = [p for p in produtos_db if p[3] == "Ativo"]
-    movimentos = listar_movimentacoes_bd()
+    # Montar uma tabela HTML com 2 colunas fixas
+    table_html = """
+    <style>
+    /* Define uma tabela com largura total, mas com 2 colunas fixas para cada linha */
+    table.produtos {
+      width: 100%;
+      table-layout: fixed;
+      border-spacing: 10px; /* Espaço entre células */
+    }
+    td.produto {
+      vertical-align: top;
+      width: 50%; /* Força 2 colunas */
+    }
+    .img-container {
+      width: 150px; height: 150px; 
+      overflow: hidden; 
+      border-radius: 8px; 
+      border:1px solid #ccc;
+      margin-bottom: 5px;
+    }
+    .img-container img {
+      width: 100%; 
+      height: 100%; 
+      object-fit: cover;
+    }
+    .card {
+      background-color: #f8f9fa; 
+      padding: 10px; 
+      border-radius: 8px; 
+      border: 1px solid #dee2e6;
+      margin-bottom: 8px;
+    }
+    </style>
+    <table class="produtos">
+      <tr>
+    """
+
+    # Gerar células para cada produto, 2 colunas por linha
+    for i, p in enumerate(produtos_ativos):
+        pid, nome, info, status, preco, imagem_url = p
+        saldo = calcular_saldo(nome, movimentos)
+
+        # Montar o HTML de cada produto (card)
+        card_html = f"""
+        <div class="card">
+          <div class="img-container">
+        """
+
+        if imagem_url:
+            card_html += f'<img src="{imagem_url}" />'
+        else:
+            card_html += """
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;">
+              Sem imagem
+            </div>
+            """
+
+        card_html += "</div>"  # Fecha .img-container
+
+        card_html += f"<strong>{nome}</strong> ({saldo} disponíveis)<br>"
+        card_html += f"<strong>R$ {preco:.2f}</strong><br>"
+
+        # Adicionar um placeholder para a quantidade e botão (faremos via st.number_input e st.button com o mesmo key)
+        # Aqui, só exibimos o HTML. O input real será em outro lugar.
+        card_html += "</div>"  # Fecha .card
+
+        # Abre a célula da tabela
+        if i % 2 == 0 and i != 0:
+            table_html += "</tr><tr>"  # Fecha linha anterior e inicia nova se já temos 2 colunas
+
+        table_html += f'<td class="produto" id="produto_{i}">{card_html}</td>'
+
+    # Fechar tabela
+    table_html += """
+      </tr>
+    </table>
+    """
+
+    # Exibir a tabela
+    st.markdown(table_html, unsafe_allow_html=True)
+
+    # Agora, precisamos exibir os inputs (number_input e botões) de cada produto usando o mesmo índice.
+    # Vamos criar, por exemplo, um container "expander" ou algo abaixo da tabela para cada produto.
+    # Ou podemos fazer um loop e exibir inputs sem colunas, mas associando keys únicos.
 
     for i, p in enumerate(produtos_ativos):
-        coluna = colunas[i % num_colunas]
-        with coluna:
-            pid, nome, info, status, preco, imagem_url = p
-            saldo = calcular_saldo(nome, movimentos)
+        pid, nome, info, status, preco, imagem_url = p
+        saldo = calcular_saldo(nome, movimentos)
 
-            # Exibir imagem
-            if imagem_url:
-                image_html = f"""
-                <div style="width:150px; height:150px; overflow:hidden; border-radius:8px; border:1px solid #ccc;">
-                  <img src="{imagem_url}" style="width:100%; height:100%; object-fit:cover;" />
-                </div>
-                """
-                st.markdown(image_html, unsafe_allow_html=True)
+        # Criar inputs e botões para cada produto
+        st.markdown(f"### {nome}")
+        if saldo > 0:
+            qtd_selecionada = st.number_input(
+                label=f"Qtd_{i}",
+                min_value=1,
+                max_value=saldo,
+                value=1,
+                step=1,
+                key=f"qtd_{i}"
+            )
+        else:
+            st.warning("Estoque esgotado!")
+            qtd_selecionada = st.number_input(
+                label=f"Qtd_{i}",
+                min_value=0,
+                max_value=0,
+                value=0,
+                step=1,
+                key=f"qtd_{i}",
+                disabled=True
+            )
+
+        msg_container = st.empty()
+        if st.button(f"Adicionar {nome}", key=f"add_{i}"):
+            if qtd_selecionada > saldo:
+                msg_container.error("Quantidade indisponível no estoque!")
             else:
-                st.markdown("""
-                <div style="width:150px; height:150px; background-color:#f0f0f0; border-radius:8px;
-                display:flex; align-items:center; justify-content:center; color:#aaa; font-size:14px;">
-                  Sem imagem
-                </div>
-                """, unsafe_allow_html=True)
-
-            # Nome e estoque disponível
-            st.markdown(f"**{nome}** ({saldo} disponíveis)")
-
-            # Preço e quantidade (empilhados)
-            st.markdown(f"**R$ {preco:.2f}**")
-            if saldo > 0:
-                qtd_selecionada = st.number_input(
-                    label="Qtd",
-                    min_value=1,
-                    max_value=saldo,
-                    value=1,
-                    step=1,
-                    key=f"qtd_{i}"
-                )
-                qtd_selecionada = int(qtd_selecionada)
-            else:
-                st.warning("Estoque esgotado!")
-                qtd_selecionada = st.number_input(
-                    label="Qtd",
-                    min_value=0,
-                    max_value=0,
-                    value=0,
-                    step=1,
-                    key=f"qtd_{i}",
-                    disabled=True
-                )
-                qtd_selecionada = int(qtd_selecionada)
-
-            # Botão de adicionar ao carrinho
-            msg_container = st.empty()
-            if st.button(f"🛍️ Adicionar {nome}", key=f"add_{i}"):
-                if qtd_selecionada > saldo:
-                    msg_container.error("Quantidade indisponível no estoque!")
+                if nome in st.session_state.carrinho:
+                    st.session_state.carrinho[nome]["quantidade"] += int(qtd_selecionada)
                 else:
-                    if nome in st.session_state.carrinho:
-                        st.session_state.carrinho[nome]["quantidade"] += qtd_selecionada
-                    else:
-                        st.session_state.carrinho[nome] = {"preco": preco, "quantidade": qtd_selecionada}
-                    msg_container.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
-            st.markdown("---")
+                    st.session_state.carrinho[nome] = {"preco": preco, "quantidade": int(qtd_selecionada)}
+                msg_container.success(f"{int(qtd_selecionada)}x {nome} adicionado ao carrinho!")
 
     # ======================
     # CARRINHO DE COMPRAS
