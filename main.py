@@ -73,7 +73,30 @@ def upload_imagem_git(imagem_bytes, nome_arquivo):
         print(f"❌ Erro no upload da imagem: {e}")
         return None
 
+# Adicione isto no início do seu app (fora de qualquer função)
+st.markdown("""
+    <style>
+        @media (max-width: 480px) {
+            div[data-testid="column"] {
+                flex: 1 1 calc(50% - 0.5rem) !important;
+                min-width: calc(50% - 0.5rem) !important;
+                max-width: calc(50% - 0.5rem) !important;
+            }
+            
+            /* Corrige alinhamento de imagens */
+            div[data-testid="column"] > div > div {
+                padding: 0.5rem !important;
+            }
+        }
+    </style>
+""", unsafe_allow_html=True)
 
+def pagina_emitir_venda():
+    st.title("🛒 PDV - Emitir Venda")
+    
+    # Restante do seu código original...
+    num_colunas = 2
+    colunas = st.columns(num_colunas, gap="small")  # Gap reduzido
 
 
 
@@ -280,7 +303,6 @@ def pagina_cadastrar_produtos():
         # Chama a função
         pagina_entrada_produtos()
 
-import streamlit as st
 
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
@@ -810,8 +832,8 @@ def pagina_gerenciar_usuarios():
 ################################################
 
 def main():
-    # st.title("Gerenciador de Vendas 🛒", layout="wide")
-    st.set_page_config(page_title="Gerenciador de Vendas 🛒", layout="wide")
+    
+  
 
     if "banco_inicializado" not in st.session_state:
         criar_banco_de_dados()
