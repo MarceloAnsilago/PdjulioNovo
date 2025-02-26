@@ -304,154 +304,150 @@ def pagina_cadastrar_produtos():
         pagina_entrada_produtos()
 
 
+
+
+def calcular_saldo(produto_nome, movimentos):
+    entradas = sum(
+        m[6] for m in movimentos
+        if m[3] == produto_nome and m[7].lower() == "entrada" and m[10].lower() == "ativo"
+    )
+    saidas = sum(
+        m[6] for m in movimentos
+        if m[3] == produto_nome and m[7].lower() in ("venda", "saída", "saida") and m[10].lower() == "ativo"
+    )
+    return entradas - saidas
+
+
+
+
+
+
+
+
+
+
+
+
 def pagina_emitir_venda():
     st.title("🛒 PDV - Emitir Venda")
-    
 
-    # CSS para forçar duas colunas fixas (mesmo em mobile)
-    st.markdown(
-        """
-        <style>
-        /* Força que cada item do grid tenha 50% da largura */
-        div[data-baseweb="grid"] > div {
-            flex: 0 0 50% !important;
-            max-width: 50% !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
+    # Inicializa o carrinho na sessão
     if "carrinho" not in st.session_state:
         st.session_state.carrinho = {}
 
+    # Número de colunas na tela maior
     num_colunas = 2
     colunas = st.columns(num_colunas)
 
-    def calcular_saldo(produto_nome, movimentos):
-        entradas = sum(
-            m[6] for m in movimentos
-            if m[3] == produto_nome and m[7].lower() == "entrada" and m[10].lower() == "ativo"
-        )
-        saidas = sum(
-            m[6] for m in movimentos
-            if m[3] == produto_nome and m[7].lower() in ("venda", "saída", "saida") and m[10].lower() == "ativo"
-        )
-        return entradas - saidas
-
-    produtos_db = listar_produtos_bd()
+    # Exemplos de funções do seu banco de dados
+    produtos_db = listar_produtos_bd()  # (id, nome, info, status, preco, imagem_url)
     produtos_ativos = [p for p in produtos_db if p[3] == "Ativo"]
     movimentos = listar_movimentacoes_bd()
 
+    # Exibir os produtos em colunas
     for i, p in enumerate(produtos_ativos):
-        coluna = colunas[i % num_colunas]
-        with coluna:
-            pid, nome, info, status, preco, imagem_url = p
-            saldo = calcular_saldo(nome, movimentos)
+        pid, nome, info, status, preco, imagem_url = p
+        saldo = calcular_saldo(nome, movimentos)
 
-            # Exibir imagem
+        # Escolhe a coluna usando o índice (i % num_colunas)
+        with colunas[i % num_colunas]:
+            # Se houver imagem, exibe usando st.image com uso de toda a largura da coluna
             if imagem_url:
-                image_html = f"""
-                <div style="width:150px; height:150px; overflow:hidden; border-radius:8px; border:1px solid #ccc;">
-                  <img src="{imagem_url}" style="width:100%; height:100%; object-fit:cover;" />
-                </div>
-                """
-                st.markdown(image_html, unsafe_allow_html=True)
+                st.image(imagem_url, use_container_width=True)
+
             else:
-                st.markdown("""
-                <div style="width:150px; height:150px; background-color:#f0f0f0; border-radius:8px;
-                display:flex; align-items:center; justify-content:center; color:#aaa; font-size:14px;">
-                  Sem imagem
-                </div>
-                """, unsafe_allow_html=True)
+                st.text("Sem imagem")
 
-            # Nome e estoque disponível
             st.markdown(f"**{nome}** ({saldo} disponíveis)")
-
-            # Preço e quantidade (empilhados)
             st.markdown(f"**R$ {preco:.2f}**")
+
+            # Qtd
             if saldo > 0:
                 qtd_selecionada = st.number_input(
-                    label="Qtd",
+                    f"Qtd ({nome})",
                     min_value=1,
                     max_value=saldo,
                     value=1,
                     step=1,
                     key=f"qtd_{i}"
                 )
-                qtd_selecionada = int(qtd_selecionada)
             else:
                 st.warning("Estoque esgotado!")
                 qtd_selecionada = st.number_input(
-                    label="Qtd",
-                    min_value=0,
-                    max_value=0,
-                    value=0,
-                    step=1,
-                    key=f"qtd_{i}",
-                    disabled=True
+                    f"Qtd ({nome})",
+                    min_value=0, max_value=0, value=0, step=1,
+                    key=f"qtd_{i}", disabled=True
                 )
-                qtd_selecionada = int(qtd_selecionada)
 
             # Botão de adicionar ao carrinho
-            msg_container = st.empty()
-            if st.button(f"🛍️ Adicionar {nome}", key=f"add_{i}"):
+            if st.button(f"Adicionar {nome}", key=f"add_{i}"):
                 if qtd_selecionada > saldo:
-                    msg_container.error("Quantidade indisponível no estoque!")
+                    st.error("Quantidade indisponível no estoque!")
                 else:
                     if nome in st.session_state.carrinho:
                         st.session_state.carrinho[nome]["quantidade"] += qtd_selecionada
                     else:
-                        st.session_state.carrinho[nome] = {"preco": preco, "quantidade": qtd_selecionada}
-                    msg_container.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
+                        st.session_state.carrinho[nome] = {
+                            "preco": preco,
+                            "quantidade": qtd_selecionada
+                        }
+                    st.success(f"{qtd_selecionada}x {nome} adicionado ao carrinho!")
             st.markdown("---")
-
-   
 
     # ======================
     # CARRINHO DE COMPRAS
     # ======================
     st.markdown("## 🛒 Carrinho")
+
     if st.session_state.carrinho:
         total = 0
         itens_remover = []
+
         for nome, item in st.session_state.carrinho.items():
             subtotal = item["preco"] * item["quantidade"]
             total += subtotal
-            with st.container():
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    st.markdown(f"""
-                    <div style='background-color: #f8f9fa; padding: 10px; border-radius: 8px;
-                    margin-bottom: 8px; border: 1px solid #dee2e6;'>
-                        <strong>{item['quantidade']}x {nome}</strong><br>
-                        <span style='color: #6c757d;'>Preço unitário: R$ {item['preco']:.2f}</span><br>
-                        <strong>Total: R$ {subtotal:.2f}</strong>
-                    </div>
-                    """, unsafe_allow_html=True)
-                with col2:
-                    if st.button(f"❌", key=f"remove_{nome}"):
-                        itens_remover.append(nome)
+
+            col1, col2 = st.columns([4, 1])
+            with col1:
+                st.markdown(f"""
+                <div style='background-color: #f8f9fa; padding: 10px; border-radius: 8px;
+                            margin-bottom: 8px; border: 1px solid #dee2e6;'>
+                    <strong>{item['quantidade']}x {nome}</strong><br>
+                    <span style='color: #6c757d;'>Preço unitário: R$ {item['preco']:.2f}</span><br>
+                    <strong>Total: R$ {subtotal:.2f}</strong>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                if st.button(f"❌", key=f"remove_{nome}"):
+                    itens_remover.append(nome)
+
+        # Remove itens marcados para remoção
         for item in itens_remover:
             del st.session_state.carrinho[item]
             st.warning(f"{item} removido do carrinho.")
             st.rerun()
 
+        # Total
         st.markdown(f"""
         <div style='background-color: #fffbeb; padding: 10px; border-radius: 8px;
-        margin-top: 12px; border: 1px solid #ffd700; text-align: center;'>
+                    margin-top: 12px; border: 1px solid #ffd700; text-align: center;'>
             <h4>💳 Total: R$ {total:.2f}</h4>
         </div>
         """, unsafe_allow_html=True)
 
+        # Método de pagamento
         st.markdown("### 🏦 Escolha o método de pagamento:")
-        metodo_pagamento = st.radio("Selecione uma opção:", ["Dinheiro", "Pix", "Cartão", "Outro"])
+        metodo_pagamento = st.radio(
+            "Selecione uma opção:",
+            ["Dinheiro", "Pix", "Cartão", "Outro"]
+        )
         if metodo_pagamento == "Outro":
             metodo_personalizado = st.text_input("Digite o método de pagamento:")
 
-        op_num = None
+        # Botão de Finalizar
         if st.button("Finalizar Venda"):
             usuario = st.session_state.get("usuario_logado", "Desconhecido")
+            op_num = None
             for nome, item in st.session_state.carrinho.items():
                 quantidade = item["quantidade"]
                 preco_unit = item["preco"]
@@ -480,21 +476,23 @@ def pagina_emitir_venda():
                         num_operacao=op_num
                     )
             st.success("Venda finalizada com sucesso!")
-            st.info(f"Número da operação: {op_num}")
+            if op_num:
+                st.info(f"Número da operação: {op_num}")
             st.session_state.carrinho = {}
             st.rerun()
 
+        # Botão de limpar carrinho
         if st.button("🧹 Limpar Carrinho"):
             st.session_state.carrinho = {}
             st.success("Carrinho limpo!")
             st.rerun()
+
     else:
         st.markdown(
             "<div style='text-align: center; color: #6c757d; font-size: 18px;'>"
             "🛒 Seu carrinho está vazio.</div>",
             unsafe_allow_html=True,
         )
-
 
 
 
